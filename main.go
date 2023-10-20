@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/o1egl/paseto/v2"
+	"github.com/o1egl/paseto/v4"
+	"github.com/o1egl/paseto/v4/parsing"
+	"github.com/o1egl/paseto/v4/payload"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -137,17 +139,22 @@ func findUser(username, password string) (*User, error) {
 func generateToken(username string) (string, error) {
 	secretKey := []byte("123456")
 
-	v2 := paseto.NewV2()
+	// PASETO v4
+	v4 := paseto.NewV4()
+
 	now := time.Now()
 	expiration := now.Add(24 * time.Hour)
 
-	payload := map[string]interface{}{
+	// Membuat payload PASETO
+	pl := payload.New(map[string]interface{}{
 		"username": username,
-	}
+	})
 
-	token, err := v2.Encrypt(secretKey, payload, nil)
+	// Membuat PASETO token
+	token, err := v4.Sign(secretKey, pl, parsing.NewV4())
 	if err != nil {
 		return "", err
 	}
+
 	return token, nil
 }
