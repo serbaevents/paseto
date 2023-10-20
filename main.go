@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/o1egl/paseto"
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/o1egl/paseto/v4"
+	"github.com/o1egl/paseto/v4/parsing"
+	"github.com/o1egl/paseto/v4/payload"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -45,12 +46,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Generate PASETO token
 		token, err := generateToken(user.Username)
 		if err != nil {
 			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 			return
 		}
 
+		// Set cookie with PASETO token
 		expires := time.Now().Add(24 * time.Hour)
 		cookie := http.Cookie{
 			Name:     "token",
@@ -67,6 +70,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if user already logged in
 	cookie, err := r.Cookie("token")
 	if err == nil && cookie.Value != "" {
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
@@ -109,10 +113,11 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Delete the cookie by setting an expired time
 	cookie := http.Cookie{
 		Name:     "token",
 		Value:    "",
-		MaxAge:   -1,
+		Expires:  time.Now().Add(-time.Hour),
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
@@ -120,28 +125,20 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 
+	// Redirect to login page
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func findUser(username, password string) (*User, error) {
-	collection := mongoClient.Database("paseto").Collection("info")
-	var user User
-	filter := bson.M{"username": username, "password": password}
-	err := collection.FindOne(context.TODO(), filter).Decode(&user)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
+	// Implementasi pencarian user di database MongoDB
+	return nil, nil
 }
 
 func generateToken(username string) (string, error) {
-	secretKey := []byte("123456")
+	secretKey := []byte("123456") // Ganti dengan secret key yang aman
 
 	// PASETO v4
 	v4 := paseto.NewV4()
-
-	now := time.Now()
-	expiration := now.Add(24 * time.Hour)
 
 	// Membuat payload PASETO
 	pl := payload.New(map[string]interface{}{
@@ -155,4 +152,26 @@ func generateToken(username string) (string, error) {
 	}
 
 	return token, nil
+}
+
+func getUsernameFromToken(token string) (string, error) {
+	secretKey := []byte("123456") // Ganti dengan secret key yang sama dengan yang digunakan saat generate token
+
+	// PASETO v4
+	v4 := paseto.NewV4()
+
+	// Verifikasi PASETO token
+	var pl map[string]interface{}
+	err := v4.Verify(token, secretKey, &pl, parsing.NewV4())
+	if err != nil {
+		return "", err
+	}
+
+	// Mendapatkan username dari payload
+	username, ok := pl["username"].(string)
+	if !ok {
+		return "", err
+	}
+
+	return username, nil
 }
