@@ -105,15 +105,19 @@ func findUser(username, password string) (*User, error) {
 	return &user, nil
 }
 
-func generateToken(username string) string {
+func generateToken(username string) (string, error) {
 	// Generate PASETO token
 	v2 := paseto.NewV2()
 	now := time.Now()
 	expiration := now.Add(24 * time.Hour) // Token expires in 24 hours
 
-	token, err := v2.Encrypt([]byte("your-secret-key"), nil, username, now, expiration, nil)
+	// Ganti "your-secret-key" dengan kunci rahasia yang aman
+	secretKey := []byte("1234")
+
+	token, err := v2.Encrypt(secretKey, nil, username, now, expiration, nil)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return token
+	return token, nil
 }
+
