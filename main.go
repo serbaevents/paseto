@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -112,13 +110,13 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	cookie := http.Cookie{
-		Name:   "token",
-		Value:  "",
-		MaxAge: -1,
-		Secure: true,
+		Name:     "token",
+		Value:    "",
+		MaxAge:   -1,
+		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Path:   "/",
+		Path:     "/",
 	}
 	http.SetCookie(w, &cookie)
 
@@ -150,3 +148,6 @@ func generateToken(username string) (string, error) {
 	token, err := v2.Encrypt(secretKey, payload, nil)
 	if err != nil {
 		return "", err
+	}
+	return token, nil
+}
