@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/o1egl/paseto/v4"
-	"github.com/o1egl/paseto/v4/parsing"
-	"github.com/o1egl/paseto/v4/payload"
+	"github.com/o1egl/paseto"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
