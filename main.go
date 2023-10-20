@@ -122,7 +122,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
-
 func findUser(username, password string) (*User, error) {
 	collection := mongoClient.Database("paseto").Collection("info")
 	var user User
@@ -144,9 +143,11 @@ func generateToken(username string) (string, error) {
 	expiration := now.Add(24 * time.Hour)
 
 	// Membuat payload PASETO
-	claims := paseto.Claims{
-		"username": username,
-		"exp":      expiration,
+	claims := paseto.JSONToken{
+		Subject:    username,
+		Issuer:     "your_app_name",
+		Audience:   "your_app_users",
+		Expiration: expiration,
 	}
 
 	// Membuat PASETO token
@@ -156,4 +157,19 @@ func generateToken(username string) (string, error) {
 	}
 
 	return token, nil
+}
+
+func getUsernameFromToken(token string) (string, error) {
+	secretKey := []byte("sirajaevents")
+
+	// PASETO v2
+	v2 := paseto.NewV2()
+
+	var claims paseto.JSONToken
+	err := v2.Decrypt(token, secretKey, &claims, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return claims.Subject, nil
 }
