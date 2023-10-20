@@ -42,17 +42,21 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
-		// Validasi login (misalnya, dari MongoDB)
+		// Validasi login dari MongoDB koleksi "info" di basis data "paseto"
 		user, err := findUser(username, password)
 		if err != nil {
 			http.Error(w, "Invalid login credentials", http.StatusUnauthorized)
 			return
 		}
 
-		// Generate PASETO token
-		token := generateToken(user.Username)
+		// Generate token PASETO
+		token, err := generateToken(user.Username)
+		if err != nil {
+			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+			return
+		}
 
-		// Set cookie with token
+		// Set cookie dengan token
 		expires := time.Now().Add(24 * time.Hour)
 		cookie := http.Cookie{
 			Name:     "token",
@@ -78,12 +82,12 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Handle dashboard logic here, check token validity, etc.
+	// Handle logic for dashboard here, check token validity, etc.
 	fmt.Fprintf(w, "Welcome to Dashboard!")
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Delete token cookie
+	// Hapus cookie token
 	cookie := http.Cookie{
 		Name:   "token",
 		Value:  "",
@@ -95,7 +99,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func findUser(username, password string) (*User, error) {
-	collection := mongoClient.Database("mydb").Collection("users")
+	collection := mongoClient.Database("paseto").Collection("info") // Nama basis data dan koleksi diubah
 	var user User
 	filter := bson.M{"username": username, "password": password}
 	err := collection.FindOne(context.TODO(), filter).Decode(&user)
@@ -106,18 +110,23 @@ func findUser(username, password string) (*User, error) {
 }
 
 func generateToken(username string) (string, error) {
+	// Ganti "your-secret-key" dengan kunci rahasia yang aman
+	secretKey := []byte("123456")
+
 	// Generate PASETO token
 	v2 := paseto.NewV2()
 	now := time.Now()
 	expiration := now.Add(24 * time.Hour) // Token expires in 24 hours
 
-	// Ganti "your-secret-key" dengan kunci rahasia yang aman
-	secretKey := []byte("1234")
+	// Payload adalah data yang ingin Anda sertakan dalam token (contoh: username)
+	payload := map[string]interface{}{
+		"username": username,
+	}
 
-	token, err := v2.Encrypt(secretKey, nil, username, now, expiration, nil)
+	// Mengenkripsi payload ke dalam token
+	token, err := v2.Encrypt(secretKey, payload, nil, now, expiration, nil)
 	if err != nil {
 		return "", err
 	}
 	return token, nil
 }
-
