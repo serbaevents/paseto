@@ -38,41 +38,7 @@ type User struct {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		username := r.FormValue("username")
-		password := r.FormValue("password")
-
-		// Validasi login dari MongoDB koleksi "info" di basis data "paseto"
-		user, err := findUser(username, password)
-		if err != nil {
-			http.Error(w, "Invalid login credentials", http.StatusUnauthorized)
-			return
-		}
-
-		// Generate token PASETO
-		token, err := generateToken(user.Username)
-		if err != nil {
-			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
-			return
-		}
-
-		// Set cookie dengan token
-		expires := time.Now().Add(24 * time.Hour)
-		cookie := http.Cookie{
-			Name:     "token",
-			Value:    token,
-			Expires:  expires,
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-		}
-		http.SetCookie(w, &cookie)
-
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
-		return
-	}
-
-	http.ServeFile(w, r, "login.html")
+	// ...
 }
 
 func dashboardHandler(w http.ResponseWriter, r *http.Request) {
@@ -87,15 +53,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Hapus cookie token
-	cookie := http.Cookie{
-		Name:   "token",
-		Value:  "",
-		MaxAge: -1,
-	}
-	http.SetCookie(w, &cookie)
-
-	http.Redirect(w, r, "/login", http.StatusFound)
+	// ...
 }
 
 func findUser(username, password string) (*User, error) {
@@ -118,13 +76,14 @@ func generateToken(username string) (string, error) {
 	now := time.Now()
 	expiration := now.Add(24 * time.Hour) // Token expires in 24 hours
 
-	// Payload adalah data yang ingin Anda sertakan dalam token (contoh: username)
+	// Payload adalah data yang ingin Anda sertakan dalam token (contoh: username dan waktu kedaluwarsa)
 	payload := map[string]interface{}{
 		"username": username,
+		"exp":      expiration, // Tambahkan waktu kedaluwarsa ke dalam payload
 	}
 
 	// Mengenkripsi payload ke dalam token
-	token, err := v2.Encrypt(secretKey, payload, nil, now, expiration, nil)
+	token, err := v2.Encrypt(secretKey, payload, nil)
 	if err != nil {
 		return "", err
 	}
